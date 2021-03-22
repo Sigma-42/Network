@@ -3,12 +3,145 @@
  */
 package Network;
 
+import com.google.common.graph.*;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+
 public class App {
-    public String getGreeting() {
-        return "Hello World!";
+    private Scanner scanner = new Scanner(System.in);
+    private ArrayList<person> people = new ArrayList<>();
+    private ArrayList<friend> friends = new ArrayList<>();
+    private ArrayList<romanticRelationship> romantics = new ArrayList<>();
+    private ArrayList<family> families = new ArrayList<>();
+
+
+    private MutableNetwork<person, relationship> relGraph;
+
+    private void addVars(){
+
+        person a = new person("jeff",44);
+        person b = new person("kevin",25);
+        person c = new person("bob",49);
+        person d = new person("steve",37);
+        relGraph.addNode(a);
+        relGraph.addNode(b);
+        relGraph.addNode(c);
+        relGraph.addNode(d);
+
+        friends.add(new friend(a,b));
+        relGraph.addEdge(friends.get(friends.size()-1).getP1(),friends.get(friends.size()-1).getP2(),friends.get(friends.size()-1));
+
+        romantics.add(new romanticRelationship(a,c));
+        relGraph.addEdge(romantics.get(romantics.size()-1).getP1(),romantics.get(romantics.size()-1).getP2(),romantics.get(romantics.size()-1));
+        families.add(new family(b,c));
+        relGraph.addEdge(families.get(families.size()-1).getP1(),families.get(families.size()-1).getP2(),families.get(families.size()-1));
+        families.add(new family(a,d));
+        relGraph.addEdge(families.get(families.size()-1).getP1(),families.get(families.size()-1).getP2(),families.get(families.size()-1));
+
+    }
+    private void save() throws IOException {
+        try {
+            Gson gson = new Gson();
+            String json = gson.toJson(people);
+            Files.writeString(Paths.get("./people.json"), json);
+            json = gson.toJson(friends);
+            Files.writeString(Paths.get("./friends.json"), json);
+            json = gson.toJson(families);
+            Files.writeString(Paths.get("./families.json"), json);
+            json = gson.toJson(romantics);
+            Files.writeString(Paths.get("./romantics.json"), json);
+
+
+
+        }catch(IOException ex){
+            ex.printStackTrace();
+        }
+    }
+    private void load() throws IOException {
+        try {
+            Gson gson = new Gson();
+            Type peopleA = new TypeToken<ArrayList<person>>(){}.getType();
+            people = gson.fromJson(Files.readString(Paths.get("./people.json")), peopleA);
+            Type friendA = new TypeToken<ArrayList<friend>>(){}.getType();
+            friends = gson.fromJson(Files.readString(Paths.get("./friends.json")), friendA);
+
+            Type familyA = new TypeToken<ArrayList<family>>(){}.getType();
+            families = gson.fromJson(Files.readString(Paths.get("./families.json")), familyA);
+
+            Type romA = new TypeToken<ArrayList<romanticRelationship>>(){}.getType();
+            romantics = gson.fromJson(Files.readString(Paths.get("./romantics.json")), romA);
+            for (person p:people){
+                relGraph.addNode(p);
+            }
+            for (friend f: friends){
+                relGraph.addEdge(f.getP1(),f.getP2(),f);
+            }
+            for (family f: families){
+                relGraph.addEdge(f.getP1(),f.getP2(),f);
+            }
+            for (romanticRelationship f: romantics){
+                relGraph.addEdge(f.getP1(),f.getP2(),f);
+            }
+
+
+        }catch(IOException ex){
+            ex.printStackTrace();
+        }
+
+    }
+    private void run() throws IOException {
+        relGraph = NetworkBuilder
+                .undirected()
+                .allowsParallelEdges(true)
+                .expectedNodeCount(100000)
+                .expectedEdgeCount(1000000)
+                .build();
+        load();
+        families.get(0).accept(new printVisitor());
+
+
+
+
+
+
+
+
+
     }
 
-    public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+
+    public static void main(String[] args) throws IOException {
+        App app = new App();
+        app.run();
+
+        app.accept(new printVisitor());
+
+    }
+
+    public void accept(Visitor v){
+        v.visitApp(this);
+    }
+
+    public ArrayList<person> getPeople() {
+        return people;
+    }
+    public ArrayList<friend> getFriends() {
+        return friends;
+    }
+    public ArrayList<family> getFamilies() {
+        return families;
+    }
+    public ArrayList<romanticRelationship> getRomantics(){
+        return romantics;
     }
 }
